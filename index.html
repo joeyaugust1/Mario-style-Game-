@@ -3,26 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Simple Platformer</title>
+  <title>Responsive Platformer</title>
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
       overflow: hidden;
       touch-action: none;
+      background: #000;
     }
 
     canvas {
-      background: #87CEEB;
       display: block;
       margin: auto;
-      border: 2px solid black;
+      background: #87CEEB;
+      touch-action: none;
     }
 
     .controls, #startGame {
       display: flex;
       justify-content: center;
-      margin-top: 10px;
+      margin-top: 8px;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .btn {
@@ -37,14 +41,12 @@
   </style>
 </head>
 <body>
-  <canvas id="game" width="640" height="360"></canvas>
+  <canvas id="game"></canvas>
 
-  <!-- Start Game Button -->
   <div id="startGame">
     <button class="btn">Start Game</button>
   </div>
 
-  <!-- Mobile Controls -->
   <div class="controls" style="display: none;" id="mobileControls">
     <button class="btn" id="left">Left</button>
     <button class="btn" id="jump">Jump</button>
@@ -54,6 +56,23 @@
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
+
+    // Base virtual resolution
+    const VIRTUAL_WIDTH = 640;
+    const VIRTUAL_HEIGHT = 360;
+
+    function resizeCanvas() {
+      const scale = Math.min(
+        window.innerWidth / VIRTUAL_WIDTH,
+        window.innerHeight / VIRTUAL_HEIGHT
+      );
+      canvas.width = VIRTUAL_WIDTH * scale;
+      canvas.height = VIRTUAL_HEIGHT * scale;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0); // scale everything
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
     const player = {
       x: 50,
@@ -71,7 +90,7 @@
     document.addEventListener("keydown", e => keys[e.code] = true);
     document.addEventListener("keyup", e => keys[e.code] = false);
 
-    // Mobile button controls
+    // Mobile Controls
     function simulateKey(code, isDown) {
       keys[code] = isDown;
     }
@@ -130,7 +149,7 @@
       }
 
       // Reset if player falls
-      if (player.y > canvas.height) {
+      if (player.y > VIRTUAL_HEIGHT) {
         player.x = 50;
         player.y = 280;
         player.dy = 0;
@@ -138,7 +157,7 @@
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
       ctx.fillStyle = "blue";
       ctx.fillRect(player.x, player.y, player.width, player.height);
@@ -172,7 +191,6 @@
       }
     }
 
-    // Start Game Button
     document.querySelector("#startGame button").addEventListener("click", () => {
       document.getElementById("startGame").style.display = "none";
       document.getElementById("mobileControls").style.display = "flex";
@@ -181,4 +199,4 @@
     });
   </script>
 </body>
-  </html
+</html>
