@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mini Mario Clone</title>
+  <style>
+    canvas { background: skyblue; display: block; margin: auto; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="640" height="360"></canvas>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const player = {
+      x: 50,
+      y: 300,
+      width: 20,
+      height: 20,
+      dx: 0,
+      dy: 0,
+      jumpPower: -8,
+      grounded: false,
+    };
+
+    const keys = {};
+    const gravity = 0.5;
+    const platforms = [{x: 0, y: 340, width: 640, height: 20}];
+
+    document.addEventListener("keydown", e => keys[e.code] = true);
+    document.addEventListener("keyup", e => keys[e.code] = false);
+
+    function update() {
+      // Horizontal movement
+      if (keys["ArrowRight"]) player.dx = 2;
+      else if (keys["ArrowLeft"]) player.dx = -2;
+      else player.dx = 0;
+
+      // Jumping
+      if (keys["Space"] && player.grounded) {
+        player.dy = player.jumpPower;
+        player.grounded = false;
+      }
+
+      // Apply gravity
+      player.dy += gravity;
+
+      // Move
+      player.x += player.dx;
+      player.y += player.dy;
+
+      // Collision
+      player.grounded = false;
+      for (let p of platforms) {
+        if (player.x < p.x + p.width &&
+            player.x + player.width > p.x &&
+            player.y < p.y + p.height &&
+            player.y + player.height > p.y) {
+          // Simple bottom collision
+          if (player.dy > 0) {
+            player.y = p.y - player.height;
+            player.dy = 0;
+            player.grounded = true;
+          }
+        }
+      }
+
+      // Boundaries
+      if (player.y > canvas.height) {
+        player.y = 300; // Reset if fall
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw player
+      ctx.fillStyle = "red";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // Draw platforms
+      ctx.fillStyle = "green";
+      for (let p of platforms) {
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+  </html
