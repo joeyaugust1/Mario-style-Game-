@@ -1,20 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Platformer with Start Button</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Simple Platformer</title>
   <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      touch-action: none;
+    }
+
     canvas {
       background: #87CEEB;
       display: block;
       margin: auto;
       border: 2px solid black;
     }
+
     .controls, #startGame {
       display: flex;
       justify-content: center;
       margin-top: 10px;
       gap: 10px;
     }
+
     .btn {
       padding: 15px 25px;
       font-size: 18px;
@@ -27,144 +37,148 @@
   </style>
 </head>
 <body>
-<canvas id="game" width="640" height="360"></canvas>
+  <canvas id="game" width="640" height="360"></canvas>
 
-<!-- Start Game Button -->
-<div id="startGame">
-  <button class="btn">Start Game</button>
-</div>
+  <!-- Start Game Button -->
+  <div id="startGame">
+    <button class="btn">Start Game</button>
+  </div>
 
-<!-- Mobile Controls -->
-<div class="controls" style="display: none;" id="mobileControls">
-  <button class="btn" id="left">Left</button>
-  <button class="btn" id="jump">Jump</button>
-  <button class="btn" id="right">Right</button>
-</div>
+  <!-- Mobile Controls -->
+  <div class="controls" style="display: none;" id="mobileControls">
+    <button class="btn" id="left">Left</button>
+    <button class="btn" id="jump">Jump</button>
+    <button class="btn" id="right">Right</button>
+  </div>
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
 
-const player = {
-  x: 50,
-  y: 280,
-  width: 20,
-  height: 20,
-  dx: 0,
-  dy: 0,
-  speed: 2.5,
-  jumpPower: -8,
-  grounded: false
-};
+    const player = {
+      x: 50,
+      y: 280,
+      width: 20,
+      height: 20,
+      dx: 0,
+      dy: 0,
+      speed: 2.5,
+      jumpPower: -8,
+      grounded: false
+    };
 
-const keys = {};
-document.addEventListener("keydown", e => keys[e.code] = true);
-document.addEventListener("keyup", e => keys[e.code] = false);
+    const keys = {};
+    document.addEventListener("keydown", e => keys[e.code] = true);
+    document.addEventListener("keyup", e => keys[e.code] = false);
 
-// Mobile button controls
-function simulateKey(code, isDown) {
-  keys[code] = isDown;
-}
-document.getElementById("left").addEventListener("touchstart", () => simulateKey("ArrowLeft", true));
-document.getElementById("left").addEventListener("touchend", () => simulateKey("ArrowLeft", false));
-document.getElementById("right").addEventListener("touchstart", () => simulateKey("ArrowRight", true));
-document.getElementById("right").addEventListener("touchend", () => simulateKey("ArrowRight", false));
-document.getElementById("jump").addEventListener("touchstart", () => simulateKey("Space", true));
-document.getElementById("jump").addEventListener("touchend", () => simulateKey("Space", false));
+    // Mobile button controls
+    function simulateKey(code, isDown) {
+      keys[code] = isDown;
+    }
 
-const gravity = 0.4;
-const platforms = [
-  {x: 0, y: 340, width: 640, height: 20},
-  {x: 150, y: 280, width: 100, height: 10},
-  {x: 300, y: 230, width: 80, height: 10}
-];
+    document.getElementById("left").addEventListener("touchstart", () => simulateKey("ArrowLeft", true));
+    document.getElementById("left").addEventListener("touchend", () => simulateKey("ArrowLeft", false));
+    document.getElementById("right").addEventListener("touchstart", () => simulateKey("ArrowRight", true));
+    document.getElementById("right").addEventListener("touchend", () => simulateKey("ArrowRight", false));
+    document.getElementById("jump").addEventListener("touchstart", () => simulateKey("Space", true));
+    document.getElementById("jump").addEventListener("touchend", () => simulateKey("Space", false));
 
-const obstacles = [
-  {x: 220, y: 320, width: 20, height: 20},
-  {x: 400, y: 320, width: 20, height: 20}
-];
+    const gravity = 0.4;
 
-function update() {
-  if (keys["ArrowRight"]) player.dx = player.speed;
-  else if (keys["ArrowLeft"]) player.dx = -player.speed;
-  else player.dx = 0;
+    const platforms = [
+      { x: 0, y: 340, width: 640, height: 20 },
+      { x: 150, y: 280, width: 100, height: 10 },
+      { x: 300, y: 230, width: 80, height: 10 }
+    ];
 
-  if (keys["Space"] && player.grounded) {
-    player.dy = player.jumpPower;
-    player.grounded = false;
-  }
+    const obstacles = [
+      { x: 220, y: 320, width: 20, height: 20 },
+      { x: 400, y: 320, width: 20, height: 20 }
+    ];
 
-  player.dy += gravity;
-  player.x += player.dx;
-  player.y += player.dy;
+    function update() {
+      if (keys["ArrowRight"]) player.dx = player.speed;
+      else if (keys["ArrowLeft"]) player.dx = -player.speed;
+      else player.dx = 0;
 
-  player.grounded = false;
-  for (let p of platforms) {
-    if (collision(player, p)) {
-      if (player.dy > 0 && player.y + player.height <= p.y + player.dy) {
-        player.y = p.y - player.height;
+      if (keys["Space"] && player.grounded) {
+        player.dy = player.jumpPower;
+        player.grounded = false;
+      }
+
+      player.dy += gravity;
+      player.x += player.dx;
+      player.y += player.dy;
+
+      player.grounded = false;
+
+      for (let p of platforms) {
+        if (collision(player, p)) {
+          if (player.dy > 0 && player.y + player.height <= p.y + player.dy) {
+            player.y = p.y - player.height;
+            player.dy = 0;
+            player.grounded = true;
+          }
+        }
+      }
+
+      for (let o of obstacles) {
+        if (collision(player, o)) {
+          if (player.dx > 0) player.x = o.x - player.width;
+          else if (player.dx < 0) player.x = o.x + o.width;
+        }
+      }
+
+      // Reset if player falls
+      if (player.y > canvas.height) {
+        player.x = 50;
+        player.y = 280;
         player.dy = 0;
-        player.grounded = true;
       }
     }
-  }
 
-  for (let o of obstacles) {
-    if (collision(player, o)) {
-      if (player.dx > 0) player.x = o.x - player.width;
-      else if (player.dx < 0) player.x = o.x + o.width;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "blue";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      ctx.fillStyle = "green";
+      for (let p of platforms) {
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+      }
+
+      ctx.fillStyle = "red";
+      for (let o of obstacles) {
+        ctx.fillRect(o.x, o.y, o.width, o.height);
+      }
     }
-  }
 
-  if (player.y > canvas.height) {
-    player.x = 50;
-    player.y = 280;
-    player.dy = 0;
-  }
-}
+    function collision(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let gameRunning = false;
+    function loop() {
+      if (gameRunning) {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+      }
+    }
 
-  ctx.fillStyle = "blue";
-  ctx.fillRect(player.x, player.y, player.width, player.height);
-
-  ctx.fillStyle = "green";
-  for (let p of platforms) {
-    ctx.fillRect(p.x, p.y, p.width, p.height);
-  }
-
-  ctx.fillStyle = "red";
-  for (let o of obstacles) {
-    ctx.fillRect(o.x, o.y, o.width, o.height);
-  }
-}
-
-function collision(a, b) {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  );
-}
-
-let gameRunning = false;
-function loop() {
-  if (gameRunning) {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
-}
-
-// Start Game Button Logic
-document.querySelector("#startGame button").addEventListener("click", () => {
-  document.getElementById("startGame").style.display = "none";
-  document.getElementById("mobileControls").style.display = "flex";
-  gameRunning = true;
-  loop();
-});
-</script>
+    // Start Game Button
+    document.querySelector("#startGame button").addEventListener("click", () => {
+      document.getElementById("startGame").style.display = "none";
+      document.getElementById("mobileControls").style.display = "flex";
+      gameRunning = true;
+      loop();
+    });
+  </script>
 </body>
   </html
