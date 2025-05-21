@@ -2,175 +2,179 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Platformer Game</title>
+  <title>Platformer</title>
   <style>
     body {
       margin: 0;
-      overflow: hidden;
       background-color: #87CEFA;
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-    canvas {
-      border: 2px solid #333;
-      image-rendering: pixelated;
-      max-width: 100vw;
-      height: auto;
-    }
-    #startBtn {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 18px;
-    }
-    .controls {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    button.control-btn {
-      font-size: 20px;
-      padding: 10px;
-    }
+      height: 100vh;
+      overflow: hidden;
+    }canvas {
+  border: 2px solid #333;
+  image-rendering: pixelated;
+  max-width: 100%;
+}
+
+#controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 10px 0;
+}
+
+.btn {
+  width: 70px;
+  height: 70px;
+  font-size: 32px;
+  border-radius: 15px;
+  border: none;
+  background-color: #fff;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+.btn:active {
+  background-color: #ddd;
+}
+
+#startButton {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+}
+
   </style>
 </head>
 <body>
-  <button id="startBtn">Start Game</button>
-  <canvas id="gameCanvas" width="960" height="1280"></canvas>
-  <div class="controls">
-    <button class="control-btn" onclick="moveLeft = true; setTimeout(()=>moveLeft=false, 200);">◀</button>
-    <button class="control-btn" onclick="moveRight = true; setTimeout(()=>moveRight=false, 200);">▶</button>
-    <button class="control-btn" onclick="moveUp = true; setTimeout(()=>moveUp=false, 200);">▲</button>
-  </div>
+  <canvas id="gameCanvas" width="960" height="1280"></canvas>  <div id="controls">
+    <button class="btn" id="leftBtn">◀️</button>
+    <button class="btn" id="jumpBtn">▲</button>
+    <button class="btn" id="rightBtn">▶️</button>
+  </div><button id="startButton">Start Game</button>
+
   <script>
     const tileSize = 32;
     const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');const level = [
-  "##############################",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                   F        #",
-  "#               ######       #",
-  "#                            #",
-  "#           #                #",
-  "#                            #",
-  "#                            #",
-  "#    ######                  #",
-  "#                            #",
-  "#                            #",
-  "# #      o           #       #",
-  "# #####################      #",
-  "#                            #",
-  "#                            #",
-  "#                     #####  #",
-  "#                            #",
-  "#                            #",
-  "#               ######       #",
-  "#                            #",
-  "#                            #",
-  "#       ######               #",
-  "#                            #",
-  "#                            #",
-  "#  S                         #",
-  "##############################"
-];
+    const ctx = canvas.getContext('2d');
+    const startButton = document.getElementById('startButton');
+    const level = [
+      "##############################",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                   F        #",
+      "#               ######       #",
+      "#                            #",
+      "#           #                #",
+      "#                            #",
+      "#                            #",
+      "#    ######                  #",
+      "#                            #",
+      "#                            #",
+      "# #      o           #       #",
+      "# #####################      #",
+      "#                            #",
+      "#                            #",
+      "#                     #####  #",
+      "#                            #",
+      "#                            #",
+      "#               ######       #",
+      "#                            #",
+      "#                            #",
+      "#       ######               #",
+      "#                            #",
+      "#                            #",
+      "#  S                         #",
+      "##############################"
+    ];
 
-const tileColors = {
-  '#': '#444',
-  ' ': '#aee7ff',
-  'S': '#0f0',
-  'F': '#f00',
-  'o': '#ff0',
-  '>': '#0ff',
-  '<': '#0ff',
-  '*': '#f0f'
-};
+    const tileColors = {
+      '#': '#444',
+      ' ': '#aee7ff',
+      'S': '#0f0',
+      'F': '#f00',
+      'o': '#ff0',
+      '>': '#0ff',
+      '<': '#0ff',
+      '*': '#f0f'
+    };
 
-let gameStarted = false;
-let moveLeft = false, moveRight = false, moveUp = false;
+    let gameStarted = false;
 
-let player = { x: 0, y: 0, width: tileSize, height: tileSize, dx: 0, dy: 0 };
+    const player = {
+      x: 0,
+      y: 0,
+      color: '#00f',
+      size: tileSize,
+    };
 
-// Find starting point
-for (let y = 0; y < level.length; y++) {
-  const x = level[y].indexOf('S');
-  if (x !== -1) {
-    player.x = x * tileSize;
-    player.y = y * tileSize;
-    break;
-  }
-}
-
-let cameraX = 0;
-let cameraY = 0;
-let camTimer = 0;
-
-function updatePlayer() {
-  const speed = 2;
-  if (moveLeft) player.x -= speed;
-  if (moveRight) player.x += speed;
-  if (moveUp) player.y -= speed; // Simplified: jump or climb
-}
-
-function updateCamera() {
-  camTimer++;
-  if (camTimer > 60) {
-    const targetX = player.x + player.width / 2 - canvas.width / 2;
-    const targetY = player.y + player.height / 2 - canvas.height / 2;
-    cameraX += (targetX - cameraX) * 0.1;
-    cameraY += (targetY - cameraY) * 0.1;
-  }
-}
-
-function drawGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  for (let y = 0; y < level.length; y++) {
-    for (let x = 0; x < level[y].length; x++) {
-      const char = level[y][x];
-      const color = tileColors[char] || '#000';
-      ctx.fillStyle = color;
-      ctx.fillRect(x * tileSize - cameraX, y * tileSize - cameraY, tileSize, tileSize);
+    function findStart() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          if (level[y][x] === 'S') {
+            player.x = x * tileSize;
+            player.y = y * tileSize;
+            return;
+          }
+        }
+      }
     }
-  }
 
-  // Player
-  ctx.fillStyle = "#00f";
-  ctx.fillRect(player.x - cameraX, player.y - cameraY, player.width, player.height);
+    function drawLevel() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          const char = level[y][x];
+          ctx.fillStyle = tileColors[char] || '#000';
+          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        }
+      }
+    }
 
-  // Optional debug dot
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(player.x + player.width / 2 - cameraX, player.y + player.height / 2 - cameraY, 4, 0, Math.PI * 2);
-  ctx.fill();
-}
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+    }
 
-function gameLoop() {
-  if (!gameStarted) return;
-  updatePlayer();
-  updateCamera();
-  drawGame();
-  requestAnimationFrame(gameLoop);
-}
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawLevel();
+      drawPlayer();
+    }
 
-document.getElementById('startBtn').addEventListener('click', () => {
-  gameStarted = true;
-  gameLoop();
-});
+    function movePlayer(dx, dy) {
+      player.x += dx * tileSize;
+      player.y += dy * tileSize;
+      drawGame();
+    }
 
-  </script>
-</body>
+    document.getElementById('leftBtn').addEventListener('click', () => movePlayer(-1, 0));
+    document.getElementById('rightBtn').addEventListener('click', () => movePlayer(1, 0));
+    document.getElementById('jumpBtn').addEventListener('click', () => movePlayer(0, -1));
+
+    startButton.addEventListener('click', () => {
+      gameStarted = true;
+      findStart();
+      drawGame();
+    });
+  </script></body>
   </html
