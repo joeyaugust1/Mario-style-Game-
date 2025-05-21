@@ -1,184 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Platformer Level</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platformer Playable Level</title>
   <style>
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      background: #87CEFA;
+      background-color: #87CEFA;
       overflow: hidden;
-      touch-action: none;
     }
-
     canvas {
       display: block;
-      background: #add8e6;
-      margin: 0 auto;
-    }
-
-    #startBtn {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 1.5em;
-      padding: 10px 20px;
-      z-index: 10;
+      background: #87CEFA;
+      image-rendering: pixelated;
     }
   </style>
 </head>
 <body>
-  <button id="startBtn">Start Game</button>
-  <canvas id="gameCanvas" width="800" height="480"></canvas>
-
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const tileSize = 40;
-    const rows = 12;
-    const cols = 20;
+  <canvas id="gameCanvas" width="480" height="320"></canvas>  <script>
+    const tileSize = 32;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
     const level = [
-      "####################",
-      "       ",
-      "#  ########  #######",
-      "#                  #",
-      "#    #     *       #",
-      "#    #   ######    #",
-      "#    #             #",
-      "#    #   o     o   #",
-      "#      #",
-      "#         ####     #",
-      "#S  ####           #",
-      "####################",
+      "##############################",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                   F        #",
+      "#               ######       #",
+      "#                            #",
+      "#           #                #",
+      "#                            #",
+      "#                            #",
+      "#    ######                  #",
+      "#                            #",
+      "#                            #",
+      "# #      o           #       #",
+      "# #####################      #",
+      "#                            #",
+      "#                            #",
+      "#                     #####  #",
+      "#                            #",
+      "#                            #",
+      "#               ######       #",
+      "#                            #",
+      "#                            #",
+      "#       ######               #",
+      "#                            #",
+      "#                            #",
+      "#  S                         #",
+      "##############################"
     ];
 
-    const player = {
-      x: 0,
-      y: 0,
-      w: tileSize * 0.8,
-      h: tileSize * 0.8,
-      dx: 0,
-      dy: 0,
-      speed: 3,
-      jumpPower: 10,
-      grounded: false,
+    const tileColors = {
+      '#': '#444', ' ': '#aee7ff', 'S': '#0f0', 'F': '#f00',
+      'o': '#ff0', '>': '#0ff', '<': '#0ff', '*': '#f0f'
     };
 
-    const keys = {};
+    let player = { x: 0, y: 0, vx: 0, vy: 0, onGround: false };
 
-    let gravity = 0.5;
-    let startGame = false;
-
-    function drawTile(type, x, y) {
-      if (type === "#") {
-        ctx.fillStyle = "#444";
-        ctx.fillRect(x, y, tileSize, tileSize);
-      } else if (type === "S") {
-        ctx.fillStyle = "green";
-        ctx.fillRect(x, y, tileSize, tileSize);
-      } else if (type === "F") {
-        ctx.fillStyle = "red";
-        ctx.fillRect(x, y, tileSize, tileSize);
-      } else if (type === "o") {
-        ctx.fillStyle = "orange";
-        ctx.beginPath();
-        ctx.arc(x + tileSize / 2, y + tileSize / 2, tileSize / 3, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (type === "*") {
-        ctx.save();
-        ctx.translate(x + tileSize / 2, y + tileSize / 2);
-        ctx.rotate((Date.now() / 1000) * Math.PI / 2);
-        ctx.fillStyle = "purple";
-        ctx.fillRect(-tileSize / 2 + 4, -tileSize / 2 + 4, tileSize - 8, tileSize - 8);
-        ctx.restore();
-      }
-    }
-
-    function drawLevel() {
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const tile = level[y][x];
-          drawTile(tile, x * tileSize, y * tileSize);
-          if (tile === "S" && player.x === 0 && player.y === 0) {
-            player.x = x * tileSize;
-            player.y = y * tileSize;
-          }
-        }
-      }
-    }
-
-    function drawPlayer() {
-      ctx.fillStyle = "blue";
-      ctx.fillRect(player.x, player.y, player.w, player.h);
-    }
-
-    function handleInput() {
-      player.dx = 0;
-      if (keys["ArrowLeft"]) player.dx = -player.speed;
-      if (keys["ArrowRight"]) player.dx = player.speed;
-      if (keys["ArrowUp"] && player.grounded) {
-        player.dy = -player.jumpPower;
-        player.grounded = false;
-      }
-    }
-
-    function applyPhysics() {
-      player.dy += gravity;
-      player.x += player.dx;
-      player.y += player.dy;
-
-      player.grounded = false;
-
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const tile = level[y][x];
-          if (tile === "#") {
-            const tileX = x * tileSize;
-            const tileY = y * tileSize;
-            if (
-              player.x < tileX + tileSize &&
-              player.x + player.w > tileX &&
-              player.y < tileY + tileSize &&
-              player.y + player.h > tileY
-            ) {
-              // Simple collision resolution
-              if (player.dy > 0) {
-                player.y = tileY - player.h;
-                player.dy = 0;
-                player.grounded = true;
-              } else if (player.dy < 0) {
-                player.y = tileY + tileSize;
-                player.dy = 0;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    function update() {
-      if (!startGame) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      handleInput();
-      applyPhysics();
-      drawLevel();
-      drawPlayer();
-      requestAnimationFrame(update);
-    }
-
-    document.addEventListener("keydown", e => keys[e.key] = true);
-    document.addEventListener("keyup", e => keys[e.key] = false);
-
-    document.getElementById("startBtn").addEventListener("click", () => {
-      startGame = true;
-      document.getElementById("startBtn").style.display = "none";
-      update();
-    });
-  </script>
-</body>
-</html>
+    for (let y = 0; y < level.length; y++) {
+      const x = level[y].indexOf('S');
+    
