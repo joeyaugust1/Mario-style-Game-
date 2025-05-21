@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Platformer Playable Level</title>
+  <title>Platformer Game</title>
   <style>
     body {
       margin: 0;
@@ -10,68 +10,41 @@
       overflow: hidden;
     }
     canvas {
-      display: block;
-      background: #87CEFA;
+      border: 2px solid #333;
       image-rendering: pixelated;
+      display: block;
+      margin: auto;
     }
+    #startBtn, .control-btn {
+      position: fixed;
+      font-size: 1.5rem;
+      padding: 10px 20px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    #startBtn {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .control-btn {
+      bottom: 20px;
+    }
+    #leftBtn { left: 20px; }
+    #rightBtn { left: 100px; }
+    #jumpBtn { right: 20px; }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="480" height="320"></canvas>  <script>
+  <button id="startBtn">Start Game</button>
+  <canvas id="gameCanvas" width="960" height="1280" style="display:none;"></canvas>
+  <button class="control-btn" id="leftBtn">←</button>
+  <button class="control-btn" id="rightBtn">→</button>
+  <button class="control-btn" id="jumpBtn">Jump</button>  <script>
     const tileSize = 32;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-
-    const level = [
-      "##############################",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                   F        #",
-      "#               ######       #",
-      "#                            #",
-      "#           #                #",
-      "#                            #",
-      "#                            #",
-      "#    ######                  #",
-      "#                            #",
-      "#                            #",
-      "# #      o           #       #",
-      "# #####################      #",
-      "#                            #",
-      "#                            #",
-      "#                     #####  #",
-      "#                            #",
-      "#                            #",
-      "#               ######       #",
-      "#                            #",
-      "#                            #",
-      "#       ######               #",
-      "#                            #",
-      "#                            #",
-      "#  S                         #",
-      "##############################"
-    ];
-
-    const tileColors = {
-      '#': '#444', ' ': '#aee7ff', 'S': '#0f0', 'F': '#f00',
-      'o': '#ff0', '>': '#0ff', '<': '#0ff', '*': '#f0f'
-    };
-
-    let player = { x: 0, y: 0, vx: 0, vy: 0, onGround: false };
-
-    for (let y = 0; y < level.length; y++) {
-      const x = level[y].indexOf('S');
-    
+    let player = { x: 0, y: 0, vx: 0, vy: 0, onGroun
