@@ -7,44 +7,165 @@
     body {
       margin: 0;
       background-color: #87CEFA;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     canvas {
       border: 2px solid #333;
       image-rendering: pixelated;
-      display: block;
-      margin: auto;
+      max-width: 100%;
+      height: auto;
     }
-    #startBtn, .control-btn {
-      position: fixed;
-      font-size: 1.5rem;
-      padding: 10px 20px;
-      background: #444;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      z-index: 10;
+    .controls {
+      margin-top: 10px;
     }
-    #startBtn {
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+    .controls button {
+      font-size: 18px;
+      margin: 0 5px;
+      padding: 10px;
     }
-    .control-btn {
-      bottom: 20px;
-    }
-    #leftBtn { left: 20px; }
-    #rightBtn { left: 100px; }
-    #jumpBtn { right: 20px; }
   </style>
 </head>
 <body>
   <button id="startBtn">Start Game</button>
   <canvas id="gameCanvas" width="960" height="1280" style="display:none;"></canvas>
-  <button class="control-btn" id="leftBtn">←</button>
-  <button class="control-btn" id="rightBtn">→</button>
-  <button class="control-btn" id="jumpBtn">Jump</button>  <script>
+  <div class="controls" id="controls" style="display:none;">
+    <button onclick="moveLeft = true" onmouseup="moveLeft = false">Left</button>
+    <button onclick="moveRight = true" onmouseup="moveRight = false">Right</button>
+    <button onclick="jump = true">Jump</button>
+  </div>  <script>
     const tileSize = 32;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    let player = { x: 0, y: 0, vx: 0, vy: 0, onGroun
+
+    const level = [
+      "##############################",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                   F        #",
+      "#               ######       #",
+      "#                            #",
+      "#           #                #",
+      "#                            #",
+      "#                            #",
+      "#    ######                  #",
+      "#                            #",
+      "#                            #",
+      "# #      o           #       #",
+      "# #####################      #",
+      "#                            #",
+      "#                            #",
+      "#                     #####  #",
+      "#                            #",
+      "#                            #",
+      "#               ######       #",
+      "#                            #",
+      "#                            #",
+      "#       ######               #",
+      "#                            #",
+      "#                            #",
+      "#  S                         #",
+      "##############################"
+    ];
+
+    const tileColors = {
+      '#': '#444',
+      ' ': '#aee7ff',
+      'S': '#0f0',
+      'F': '#f00',
+      'o': '#ff0',
+      '>': '#0ff',
+      '<': '#0ff',
+      '*': '#f0f'
+    };
+
+    let player = { x: 0, y: 0, dx: 0, dy: 0 };
+    let moveLeft = false;
+    let moveRight = false;
+    let jump = false;
+
+    function findStart() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          if (level[y][x] === 'S') {
+            return { x: x * tileSize, y: y * tileSize };
+          }
+        }
+      }
+      return { x: 0, y: 0 };
+    }
+
+    function drawLevel() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          const char = level[y][x];
+          ctx.fillStyle = tileColors[char] || '#000';
+          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        }
+      }
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(player.x, player.y, tileSize, tileSize);
+    }
+
+    function updatePlayer() {
+      if (moveLeft) player.dx = -2;
+      else if (moveRight) player.dx = 2;
+      else player.dx = 0;
+
+      if (jump && player.dy === 0) player.dy = -8;
+
+      player.dy += 0.5; // gravity
+      player.x += player.dx;
+      player.y += player.dy;
+
+      // simple floor collision
+      if (player.y + tileSize > canvas.height) {
+        player.y = canvas.height - tileSize;
+        player.dy = 0;
+      }
+    }
+
+    function centerCamera() {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const offsetX = -player.x + canvas.width / 2 - tileSize / 2;
+      const offsetY = -player.y + canvas.height / 2 - tileSize / 2;
+      ctx.translate(offsetX, offsetY);
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updatePlayer();
+      drawLevel();
+      drawPlayer();
+      setTimeout(centerCamera, 1000);
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const start = findStart();
+      player.x = start.x;
+      player.y = start.y;
+      document.getElementById('startBtn').style.display = 'none';
+      canvas.style.display = 'block';
+      document.getElementById('controls').style.display = 'block';
+      gameLoop();
+    });
+  </script></body>
+  </html
