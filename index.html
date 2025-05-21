@@ -1,43 +1,68 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Platformer Game</title>
   <style>
     body {
       margin: 0;
       background-color: #87CEFA;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      overflow: hidden;
     }
     canvas {
       border: 2px solid #333;
       image-rendering: pixelated;
-      max-width: 100%;
-      height: auto;
+      display: block;
     }
-    .controls {
-      margin-top: 10px;
+    #startBtn, #controls {
+      position: absolute;
+      z-index: 10;
     }
-    .controls button {
+    #startBtn {
+      top: 10px;
+      left: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #controls {
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      padding: 15px;
       font-size: 18px;
-      margin: 0 5px;
-      padding: 10px;
     }
   </style>
 </head>
 <body>
   <button id="startBtn">Start Game</button>
-  <canvas id="gameCanvas" width="960" height="1280" style="display:none;"></canvas>
-  <div class="controls" id="controls" style="display:none;">
-    <button onclick="moveLeft = true" onmouseup="moveLeft = false">Left</button>
-    <button onclick="moveRight = true" onmouseup="moveRight = false">Right</button>
-    <button onclick="jump = true">Jump</button>
-  </div>  <script>
+  <div id="controls" style="display: none;">
+    <button class="btn" id="leftBtn">←</button>
+    <button class="btn" id="jumpBtn">↑</button>
+    <button class="btn" id="rightBtn">→</button>
+  </div>
+  <canvas id="gameCanvas" width="960" height="1280"></canvas>
+
+  <script>
     const tileSize = 32;
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const tileColors = {
+      "#": "#444",
+      " ": "#aee7ff",
+      "S": "#0f0",
+      "F": "#f00",
+      "o": "#ff0",
+      ">": "#0ff",
+      "<": "#0ff",
+      "*": "#f0f"
+    };
 
     const level = [
       "##############################",
@@ -82,26 +107,26 @@
       "##############################"
     ];
 
-    const tileColors = {
-      '#': '#444',
-      ' ': '#aee7ff',
-      'S': '#0f0',
-      'F': '#f00',
-      'o': '#ff0',
-      '>': '#0ff',
-      '<': '#0ff',
-      '*': '#f0f'
+    const player = {
+      x: 0,
+      y: 0,
+      width: tileSize * 0.8,
+      height: tileSize * 0.8,
+      dx: 0,
+      dy: 0,
+      onGround: false
     };
 
-    let player = { x: 0, y: 0, dx: 0, dy: 0 };
-    let moveLeft = false;
-    let moveRight = false;
-    let jump = false;
+    let keys = { left: false, right: false, up: false };
+    let gameStarted = false;
+    let cameraX = 0, cameraY = 0;
+    let targetCamX = 0, targetCamY = 0;
+    let camTimer = 0;
 
     function findStart() {
       for (let y = 0; y < level.length; y++) {
         for (let x = 0; x < level[y].length; x++) {
-          if (level[y][x] === 'S') {
+          if (level[y][x] === "S") {
             return { x: x * tileSize, y: y * tileSize };
           }
         }
@@ -109,63 +134,121 @@
       return { x: 0, y: 0 };
     }
 
-    function drawLevel() {
+    function updatePlayer() {
+      if (keys.left) player.dx = -2;
+      else if (keys.right) player.dx = 2;
+      else player.dx = 0;
+
+      player.dy += 0.4; // gravity
+
+      let newX = player.x + player.dx;
+      let newY = player.y + player.dy;
+
+      let collidedX = false;
+      let collidedY = false;
+
+      // collision
+      function isSolid(x, y) {
+        const tx = Math.floor(x / tileSize);
+        const ty = Math.floor(y / tileSize);
+        return level[ty] && tileColors[level[ty][tx]] && level[ty][tx] === "#";
+      }
+
+      // check Y
+      if (
+        isSolid(player.x, newY + player.height) ||
+        isSolid(player.x + player.width - 1, newY + player.height)
+      ) {
+        collidedY = true;
+        player.dy = 0;
+        player.onGround = true;
+        newY = Math.floor((newY + player.height) / tileSize) * tileSize - player.height;
+      } else {
+        player.onGround = false;
+      }
+
+      // check X
+      if (
+        isSolid(newX, player.y + player.height - 1) ||
+        isSolid(newX + player.width - 1, player.y + player.height - 1)
+      ) {
+        collidedX = true;
+        newX = player.x;
+      }
+
+      player.x = newX;
+      player.y = newY;
+    }
+
+    function updateCamera() {
+      // delayed following
+      const centerX = player.x + player.width / 2 - canvas.width / 2;
+      const centerY = player.y + player.height / 2 - canvas.height / 2;
+
+      camTimer++;
+      if (camTimer > 60) { // ~1 second delay
+        cameraX += (centerX - cameraX) * 0.05;
+        cameraY += (centerY - cameraY) * 0.05;
+      }
+    }
+
+    function drawGame() {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(-cameraX, -cameraY);
+
       for (let y = 0; y < level.length; y++) {
         for (let x = 0; x < level[y].length; x++) {
           const char = level[y][x];
-          ctx.fillStyle = tileColors[char] || '#000';
+          ctx.fillStyle = tileColors[char] || "#000";
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         }
       }
-    }
 
-    function drawPlayer() {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(player.x, player.y, tileSize, tileSize);
-    }
-
-    function updatePlayer() {
-      if (moveLeft) player.dx = -2;
-      else if (moveRight) player.dx = 2;
-      else player.dx = 0;
-
-      if (jump && player.dy === 0) player.dy = -8;
-
-      player.dy += 0.5; // gravity
-      player.x += player.dx;
-      player.y += player.dy;
-
-      // simple floor collision
-      if (player.y + tileSize > canvas.height) {
-        player.y = canvas.height - tileSize;
-        player.dy = 0;
-      }
-    }
-
-    function centerCamera() {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const offsetX = -player.x + canvas.width / 2 - tileSize / 2;
-      const offsetY = -player.y + canvas.height / 2 - tileSize / 2;
-      ctx.translate(offsetX, offsetY);
+      // draw player
+      ctx.fillStyle = "#00f";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
     }
 
     function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!gameStarted) return;
       updatePlayer();
-      drawLevel();
-      drawPlayer();
-      setTimeout(centerCamera, 1000);
+      updateCamera();
+      drawGame();
       requestAnimationFrame(gameLoop);
     }
 
-    document.getElementById('startBtn').addEventListener('click', () => {
+    // START
+    document.getElementById("startBtn").addEventListener("click", () => {
       const start = findStart();
       player.x = start.x;
       player.y = start.y;
-      document.getElementById('startBtn').style.display = 'none';
-      canvas.style.display = 'block';
-      document.getElementById('controls').style.display = 'block';
+      gameStarted = true;
+      document.getElementById("controls").style.display = "flex";
       gameLoop();
     });
-  </script></body>
+
+    // KEYBOARD
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") keys.left = true;
+      if (e.key === "ArrowRight") keys.right = true;
+      if (e.key === "ArrowUp" && player.onGround) {
+        player.dy = -8;
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft") keys.left = false;
+      if (e.key === "ArrowRight") keys.right = false;
+    });
+
+    // MOBILE
+    document.getElementById("leftBtn").addEventListener("touchstart", () => keys.left = true);
+    document.getElementById("leftBtn").addEventListener("touchend", () => keys.left = false);
+    document.getElementById("rightBtn").addEventListener("touchstart", () => keys.right = true);
+    document.getElementById("rightBtn").addEventListener("touchend", () => keys.right = false);
+    document.getElementById("jumpBtn").addEventListener("click", () => {
+      if (player.onGround) player.dy = -8;
+    });
+  </script>
+</body>
   </html
