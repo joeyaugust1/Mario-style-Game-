@@ -1,181 +1,248 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Platformer Game</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      background-color: #87CEFA;
+      padding: 0;
       overflow: hidden;
+      background: #87CEFA;
+      touch-action: none;
     }
     canvas {
       display: block;
       image-rendering: pixelated;
+      background-color: #87CEFA;
     }
     #controls {
       position: fixed;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      width: 100%;
       display: flex;
-      gap: 10px;
-      z-index: 100;
+      justify-content: center;
+      gap: 30px;
+      z-index: 2;
     }
-    .btn {
-      width: 60px;
-      height: 60px;
-      font-size: 32px;
-      font-weight: bold;
+    .control-btn {
+      width: 64px;
+      height: 64px;
+      font-size: 36px;
+      border-radius: 50%;
       border: none;
-      border-radius: 12px;
-      background-color: #333;
-      color: white;
-      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+      background-color: #222;
+      color: #fff;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+      touch-action: manipulation;
+    }
+    #startBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 16px 32px;
+      font-size: 24px;
+      z-index: 3;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="960" height="1280"></canvas>
   <div id="controls">
-    <button class="btn" id="leftBtn">◀️</button>
-    <button class="btn" id="jumpBtn">▲</button>
-    <button class="btn" id="rightBtn">▶️</button>
+    <button id="leftBtn" class="control-btn">◀</button>
+    <button id="jumpBtn" class="control-btn">▲</button>
+    <button id="rightBtn" class="control-btn">▶</button>
   </div>
+  <button id="startBtn">Start Game</button>
+
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const tileSize = 32;const level = [
-  "##############################",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                            #",
-  "#                   F        #",
-  "#               ######       #",
-  "#                            #",
-  "#           #                #",
-  "#                            #",
-  "#                            #",
-  "#    ######                  #",
-  "#                            #",
-  "#                            #",
-  "# #      o           #       #",
-  "# #####################      #",
-  "#                            #",
-  "#                            #",
-  "#                     #####  #",
-  "#                            #",
-  "#                            #",
-  "#               ######       #",
-  "#                            #",
-  "#                            #",
-  "#       ######               #",
-  "#                            #",
-  "#                            #",
-  "#  S                         #",
-  "##############################"
-];
+    const tileSize = 32;
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-const tileColors = {
-  '#': '#444',
-  ' ': '#aee7ff',
-  'S': '#0f0',
-  'F': '#f00',
-  'o': '#ff0',
-  '>': '#0ff',
-  '<': '#0ff',
-  '*': '#f0f'
-};
+    const level = [
+      "##############################",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                   F        #",
+      "#               ######       #",
+      "#                            #",
+      "#           #                #",
+      "#                            #",
+      "#                            #",
+      "#    ######                  #",
+      "#                            #",
+      "#                            #",
+      "# #      o           #       #",
+      "# #####################      #",
+      "#                            #",
+      "#                            #",
+      "#                     #####  #",
+      "#                            #",
+      "#                            #",
+      "#               ######       #",
+      "#                            #",
+      "#                            #",
+      "#       ######               #",
+      "#                            #",
+      "#                            #",
+      "#  S                         #",
+      "##############################"
+    ];
 
-let player = { x: 2 * tileSize, y: 36 * tileSize, vx: 0, vy: 0, onGround: false };
-const gravity = 0.5;
-const friction = 0.8;
-const speed = 2;
-const jumpStrength = -10;
+    const tileColors = {
+      '#': '#444',
+      ' ': '#aee7ff',
+      'S': '#0f0',
+      'F': '#f00',
+      'o': '#ff0',
+      '>': '#0ff',
+      '<': '#0ff',
+      '*': '#f0f'
+    };
 
-function drawLevel() {
-  for (let y = 0; y < level.length; y++) {
-    for (let x = 0; x < level[y].length; x++) {
-      const char = level[y][x];
-      const color = tileColors[char] || '#000';
-      ctx.fillStyle = color;
-      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+    let player = { x: 0, y: 0, vx: 0, vy: 0, grounded: false };
+    const gravity = 0.6;
+    const friction = 0.8;
+    const jumpPower = -12;
+    const speed = 4;
+
+    // Camera
+    let camera = { x: 0, y: 0 };
+    const cameraDelay = 1000; // ms
+
+    function findStart() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          if (level[y][x] === 'S') {
+            return { x: x * tileSize, y: y * tileSize };
+          }
+        }
+      }
+      return { x: 0, y: 0 };
     }
-  }
-}
 
-function drawPlayer() {
-  ctx.fillStyle = '#00f';
-  ctx.fillRect(player.x, player.y, tileSize, tileSize);
-}
+    function drawLevel() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          const char = level[y][x];
+          const color = tileColors[char] || '#000';
+          ctx.fillStyle = color;
+          ctx.fillRect(x * tileSize - camera.x, y * tileSize - camera.y, tileSize, tileSize);
+        }
+      }
+    }
 
-function isSolid(x, y) {
-  const gridX = Math.floor(x / tileSize);
-  const gridY = Math.floor(y / tileSize);
-  const char = (level[gridY] && level[gridY][gridX]) || ' ';
-  return char === '#';
-}
+    function drawPlayer() {
+      ctx.fillStyle = '#00f';
+      ctx.fillRect(player.x - camera.x, player.y - camera.y, tileSize, tileSize);
+    }
 
-function updatePlayer() {
-  player.vy += gravity;
-  player.vx *= friction;
+    function getTile(x, y) {
+      const tx = Math.floor(x / tileSize);
+      const ty = Math.floor(y / tileSize);
+      return (level[ty] && level[ty][tx]) || ' ';
+    }
 
-  let nextX = player.x + player.vx;
-  let nextY = player.y + player.vy;
+    function updatePlayer() {
+      player.vy += gravity;
+      player.x += player.vx;
+      player.y += player.vy;
 
-  // Horizontal collision
-  if (!isSolid(nextX, player.y) && !isSolid(nextX + tileSize - 1, player.y) &&
-      !isSolid(nextX, player.y + tileSize - 1) && !isSolid(nextX + tileSize - 1, player.y + tileSize - 1)) {
-    player.x = nextX;
-  } else {
-    player.vx = 0;
-  }
+      // Basic collision
+      player.grounded = false;
+      const below = getTile(player.x + tileSize / 2, player.y + tileSize);
+      if (below === '#') {
+        player.y = Math.floor((player.y + tileSize) / tileSize) * tileSize - tileSize;
+        player.vy = 0;
+        player.grounded = true;
+      }
 
-  // Vertical collision
-  if (!isSolid(player.x, nextY + tileSize) && !isSolid(player.x + tileSize - 1, nextY + tileSize)) {
-    player.y = nextY;
-    player.onGround = false;
-  } else {
-    player.vy = 0;
-    player.onGround = true;
-  }
-}
+      // Horizontal collision
+      const left = getTile(player.x, player.y + tileSize / 2);
+      const right = getTile(player.x + tileSize, player.y + tileSize / 2);
+      if (left === '#') {
+        player.x = Math.floor(player.x / tileSize) * tileSize + tileSize;
+        player.vx = 0;
+      }
+      if (right === '#') {
+        player.x = Math.floor((player.x + tileSize) / tileSize) * tileSize - tileSize;
+        player.vx = 0;
+      }
 
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawLevel();
-  updatePlayer();
-  drawPlayer();
-  requestAnimationFrame(gameLoop);
-}
+      // Apply friction
+      player.vx *= friction;
+    }
 
-// Mobile controls
-document.getElementById('leftBtn').addEventListener('touchstart', () => player.vx = -speed);
-document.getElementById('rightBtn').addEventListener('touchstart', () => player.vx = speed);
-document.getElementById('jumpBtn').addEventListener('touchstart', () => {
-  if (player.onGround) {
-    player.vy = jumpStrength;
-    player.onGround = false;
-  }
-});
+    function updateCamera() {
+      const targetX = player.x - canvas.width / 2 + tileSize / 2;
+      const targetY = player.y - canvas.height / 2 + tileSize / 2;
+      camera.x += (targetX - camera.x) * 0.1;
+      camera.y += (targetY - camera.y) * 0.1;
+    }
 
-document.getElementById('leftBtn').addEventListener('touchend', () => player.vx = 0);
-document.getElementById('rightBtn').addEventListener('touchend', () => player.vx = 0);
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updatePlayer();
+      updateCamera();
+      drawLevel();
+      drawPlayer();
+      requestAnimationFrame(gameLoop);
+    }
 
-gameLoop();
+    function startGame() {
+      const startPos = findStart();
+      player.x = startPos.x;
+      player.y = startPos.y;
+      player.vx = 0;
+      player.vy = 0;
+      camera.x = player.x - canvas.width / 2 + tileSize / 2;
+      camera.y = player.y - canvas.height / 2 + tileSize / 2;
+      document.getElementById("startBtn").style.display = "none";
+      setTimeout(() => {
+        requestAnimationFrame(gameLoop);
+      }, cameraDelay);
+    }
 
+    // Controls
+    let leftPressed = false;
+    let rightPressed = false;
+    document.getElementById("leftBtn").addEventListener("touchstart", () => leftPressed = true);
+    document.getElementById("leftBtn").addEventListener("touchend", () => leftPressed = false);
+    document.getElementById("rightBtn").addEventListener("touchstart", () => rightPressed = true);
+    document.getElementById("rightBtn").addEventListener("touchend", () => rightPressed = false);
+    document.getElementById("jumpBtn").addEventListener("touchstart", () => {
+      if (player.grounded) {
+        player.vy = jumpPower;
+        player.grounded = false;
+      }
+    });
+
+    setInterval(() => {
+      if (leftPressed) player.vx = -speed;
+      if (rightPressed) player.vx = speed;
+    }, 16);
+
+    document.getElementById("startBtn").addEventListener("click", startGame);
   </script>
 </body>
-  </html>
+  </html
