@@ -2,179 +2,180 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Platformer</title>
+  <title>Platformer Game</title>
   <style>
     body {
       margin: 0;
       background-color: #87CEFA;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100vh;
       overflow: hidden;
-    }canvas {
-  border: 2px solid #333;
-  image-rendering: pixelated;
-  max-width: 100%;
-}
-
-#controls {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 10px 0;
-}
-
-.btn {
-  width: 70px;
-  height: 70px;
-  font-size: 32px;
-  border-radius: 15px;
-  border: none;
-  background-color: #fff;
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-  cursor: pointer;
-}
-
-.btn:active {
-  background-color: #ddd;
-}
-
-#startButton {
-  margin-top: 10px;
-  padding: 10px 20px;
-  font-size: 18px;
-  border-radius: 10px;
-  border: none;
-  background-color: #28a745;
-  color: white;
-  cursor: pointer;
-}
-
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    .btn {
+      width: 60px;
+      height: 60px;
+      font-size: 32px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      background-color: #333;
+      color: white;
+      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="960" height="1280"></canvas>  <div id="controls">
+  <canvas id="gameCanvas" width="960" height="1280"></canvas>
+  <div id="controls">
     <button class="btn" id="leftBtn">◀️</button>
     <button class="btn" id="jumpBtn">▲</button>
     <button class="btn" id="rightBtn">▶️</button>
-  </div><button id="startButton">Start Game</button>
-
+  </div>
   <script>
-    const tileSize = 32;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const startButton = document.getElementById('startButton');
-    const level = [
-      "##############################",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                            #",
-      "#                   F        #",
-      "#               ######       #",
-      "#                            #",
-      "#           #                #",
-      "#                            #",
-      "#                            #",
-      "#    ######                  #",
-      "#                            #",
-      "#                            #",
-      "# #      o           #       #",
-      "# #####################      #",
-      "#                            #",
-      "#                            #",
-      "#                     #####  #",
-      "#                            #",
-      "#                            #",
-      "#               ######       #",
-      "#                            #",
-      "#                            #",
-      "#       ######               #",
-      "#                            #",
-      "#                            #",
-      "#  S                         #",
-      "##############################"
-    ];
+    const tileSize = 32;const level = [
+  "##############################",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                            #",
+  "#                   F        #",
+  "#               ######       #",
+  "#                            #",
+  "#           #                #",
+  "#                            #",
+  "#                            #",
+  "#    ######                  #",
+  "#                            #",
+  "#                            #",
+  "# #      o           #       #",
+  "# #####################      #",
+  "#                            #",
+  "#                            #",
+  "#                     #####  #",
+  "#                            #",
+  "#                            #",
+  "#               ######       #",
+  "#                            #",
+  "#                            #",
+  "#       ######               #",
+  "#                            #",
+  "#                            #",
+  "#  S                         #",
+  "##############################"
+];
 
-    const tileColors = {
-      '#': '#444',
-      ' ': '#aee7ff',
-      'S': '#0f0',
-      'F': '#f00',
-      'o': '#ff0',
-      '>': '#0ff',
-      '<': '#0ff',
-      '*': '#f0f'
-    };
+const tileColors = {
+  '#': '#444',
+  ' ': '#aee7ff',
+  'S': '#0f0',
+  'F': '#f00',
+  'o': '#ff0',
+  '>': '#0ff',
+  '<': '#0ff',
+  '*': '#f0f'
+};
 
-    let gameStarted = false;
+let player = { x: 2 * tileSize, y: 36 * tileSize, vx: 0, vy: 0, onGround: false };
+const gravity = 0.5;
+const friction = 0.8;
+const speed = 2;
+const jumpStrength = -10;
 
-    const player = {
-      x: 0,
-      y: 0,
-      color: '#00f',
-      size: tileSize,
-    };
-
-    function findStart() {
-      for (let y = 0; y < level.length; y++) {
-        for (let x = 0; x < level[y].length; x++) {
-          if (level[y][x] === 'S') {
-            player.x = x * tileSize;
-            player.y = y * tileSize;
-            return;
-          }
-        }
-      }
+function drawLevel() {
+  for (let y = 0; y < level.length; y++) {
+    for (let x = 0; x < level[y].length; x++) {
+      const char = level[y][x];
+      const color = tileColors[char] || '#000';
+      ctx.fillStyle = color;
+      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
     }
+  }
+}
 
-    function drawLevel() {
-      for (let y = 0; y < level.length; y++) {
-        for (let x = 0; x < level[y].length; x++) {
-          const char = level[y][x];
-          ctx.fillStyle = tileColors[char] || '#000';
-          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-        }
-      }
-    }
+function drawPlayer() {
+  ctx.fillStyle = '#00f';
+  ctx.fillRect(player.x, player.y, tileSize, tileSize);
+}
 
-    function drawPlayer() {
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y, player.size, player.size);
-    }
+function isSolid(x, y) {
+  const gridX = Math.floor(x / tileSize);
+  const gridY = Math.floor(y / tileSize);
+  const char = (level[gridY] && level[gridY][gridX]) || ' ';
+  return char === '#';
+}
 
-    function drawGame() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawLevel();
-      drawPlayer();
-    }
+function updatePlayer() {
+  player.vy += gravity;
+  player.vx *= friction;
 
-    function movePlayer(dx, dy) {
-      player.x += dx * tileSize;
-      player.y += dy * tileSize;
-      drawGame();
-    }
+  let nextX = player.x + player.vx;
+  let nextY = player.y + player.vy;
 
-    document.getElementById('leftBtn').addEventListener('click', () => movePlayer(-1, 0));
-    document.getElementById('rightBtn').addEventListener('click', () => movePlayer(1, 0));
-    document.getElementById('jumpBtn').addEventListener('click', () => movePlayer(0, -1));
+  // Horizontal collision
+  if (!isSolid(nextX, player.y) && !isSolid(nextX + tileSize - 1, player.y) &&
+      !isSolid(nextX, player.y + tileSize - 1) && !isSolid(nextX + tileSize - 1, player.y + tileSize - 1)) {
+    player.x = nextX;
+  } else {
+    player.vx = 0;
+  }
 
-    startButton.addEventListener('click', () => {
-      gameStarted = true;
-      findStart();
-      drawGame();
-    });
-  </script></body>
-  </html
+  // Vertical collision
+  if (!isSolid(player.x, nextY + tileSize) && !isSolid(player.x + tileSize - 1, nextY + tileSize)) {
+    player.y = nextY;
+    player.onGround = false;
+  } else {
+    player.vy = 0;
+    player.onGround = true;
+  }
+}
+
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawLevel();
+  updatePlayer();
+  drawPlayer();
+  requestAnimationFrame(gameLoop);
+}
+
+// Mobile controls
+document.getElementById('leftBtn').addEventListener('touchstart', () => player.vx = -speed);
+document.getElementById('rightBtn').addEventListener('touchstart', () => player.vx = speed);
+document.getElementById('jumpBtn').addEventListener('touchstart', () => {
+  if (player.onGround) {
+    player.vy = jumpStrength;
+    player.onGround = false;
+  }
+});
+
+document.getElementById('leftBtn').addEventListener('touchend', () => player.vx = 0);
+document.getElementById('rightBtn').addEventListener('touchend', () => player.vx = 0);
+
+gameLoop();
+
+  </script>
+</body>
+  </html>
