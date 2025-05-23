@@ -1,172 +1,252 @@
-<script>
-  const tileSize = 32;
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Platformer Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background-color: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      touch-action: manipulation;
+      overflow: hidden;
+    }
 
-  const level = [
-    // your level layout...
-  ];
+    canvas {
+      border: 2px solid #333;
+      image-rendering: pixelated;
+      max-width: 100%;
+      height: auto;
+    }
 
-  const tileColors = {
-    '#': '#444',
-    ' ': '#aee7ff',
-    'S': '#0f0',
-    'F': '#f00',
-    'o': '#ff0',
-    '>': '#0ff',
-    '<': '#0ff',
-    '*': '#f0f'
-  };
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 10px;
+      padding: 10px;
+    }
 
-  const player = {
-    x: 0,
-    y: 0,
-    width: tileSize * 0.8,
-    height: tileSize * 0.8,
-    color: '#00f',
-    dx: 0,
-    dy: 0,
-    speed: 2.5,
-    jumpPower: 13,
-    grounded: false,
-    colliding: false // new flag
-  };
+    .control-btn {
+      background-color: #333;
+      color: white;
+      font-size: 28px;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      min-width: 90px;
+      transition: background-color 0.2s;
+    }
 
-  let cameraX = 0;
-  let cameraY = 0;
+    .control-btn:hover {
+      background-color: #555;
+    }
 
-  // Find spawn position
-  for (let y = 0; y < level.length; y++) {
-    for (let x = 0; x < level[y].length; x++) {
-      if (level[y][x] === 'S') {
-        player.x = x * tileSize;
-        player.y = y * tileSize;
+    .control-btn.jump {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    @media screen and (max-width: 600px) {
+      .control-btn {
+        font-size: 32px;
+        padding: 18px;
+        min-width: 100px;
+      }
+
+      .control-btn.jump {
+        font-size: 14px;
       }
     }
-  }
 
-  const keys = {
-    left: false,
-    right: false,
-    jump: false
-  };
-
-  document.querySelector('.left').addEventListener('touchstart', () => keys.left = true);
-  document.querySelector('.left').addEventListener('touchend', () => keys.left = false);
-  document.querySelector('.right').addEventListener('touchstart', () => keys.right = true);
-  document.querySelector('.right').addEventListener('touchend', () => keys.right = false);
-  document.querySelector('.jump').addEventListener('touchstart', () => {
-    if (player.grounded) {
-      player.dy = -player.jumpPower;
-      player.grounded = false;
+    #debugInfo {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px;
+      font-size: 12px;
+      font-family: monospace;
+      z-index: 1000;
     }
-  });
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="960" height="1280"></canvas>
+  <div id="controls">
+    <button class="control-btn left">&#x25C0;</button>
+    <button class="control-btn jump">JUMP</button>
+    <button class="control-btn right">&#x25B6;</button>
+  </div>
+  <div id="debugInfo"></div>
 
-  function updatePlayer() {
-    player.dx = 0;
-    if (keys.left) player.dx = -player.speed;
-    if (keys.right) player.dx = player.speed;
+  <script>
+    const tileSize = 32;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-    player.dy += 0.4; // gravity
-
-    player.x += player.dx;
-    if (checkCollision(player.x, player.y)) {
-      player.x -= player.dx;
-    }
-
-    player.y += player.dy;
-    player.colliding = false;
-    if (checkCollision(player.x, player.y)) {
-      player.y -= player.dy;
-      player.colliding = true;
-      if (player.dy > 0) {
-        player.grounded = true;
-      }
-      player.dy = 0;
-    } else {
-      player.grounded = false;
-    }
-  }
-
-  function checkCollision(x, y) {
-    const corners = [
-      [x, y],
-      [x + player.width, y],
-      [x, y + player.height],
-      [x + player.width, y + player.height]
+    // Level layout (sample, customize later)
+    const level = [
+      "########################",
+      "#S        o         F #",
+      "#   #####       #######",
+      "#         >           #",
+      "########################"
     ];
 
-    for (const [cx, cy] of corners) {
-      const tx = Math.floor(cx / tileSize);
-      const ty = Math.floor(cy / tileSize);
-      if (level[ty] && level[ty][tx] && level[ty][tx] === '#') {
-        return true;
-      }
-    }
-    return false;
-  }
+    const tileColors = {
+      '#': '#444',
+      ' ': '#aee7ff',
+      'S': '#0f0',
+      'F': '#f00',
+      'o': '#ff0',
+      '>': '#0ff',
+      '<': '#0ff',
+      '*': '#f0f'
+    };
 
-  function drawLevel() {
+    const player = {
+      x: 0, y: 0,
+      width: tileSize * 0.8,
+      height: tileSize * 0.8,
+      color: '#00f',
+      dx: 0, dy: 0,
+      speed: 2.5,
+      jumpPower: 13,
+      grounded: false
+    };
+
+    let cameraX = 0, cameraY = 0;
+
     for (let y = 0; y < level.length; y++) {
       for (let x = 0; x < level[y].length; x++) {
-        const char = level[y][x];
-        const color = tileColors[char] || '#000';
-        ctx.fillStyle = color;
-        ctx.fillRect(x * tileSize - cameraX, y * tileSize - cameraY, tileSize, tileSize);
+        if (level[y][x] === 'S') {
+          player.x = x * tileSize;
+          player.y = y * tileSize;
+        }
       }
     }
-  }
 
-  function drawPlayer() {
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x - cameraX, player.y - cameraY, player.width, player.height);
-  }
+    const keys = { left: false, right: false, jump: false };
 
-  function updateCamera() {
-    const targetX = player.x + player.width / 2 - canvas.width / 2;
-    const targetY = player.y + player.height / 2 - canvas.height / 2;
-    cameraX += (targetX - cameraX) * 0.05;
-    cameraY += (targetY - cameraY) * 0.05;
-  }
+    document.querySelector('.left').addEventListener('touchstart', () => keys.left = true);
+    document.querySelector('.left').addEventListener('touchend', () => keys.left = false);
+    document.querySelector('.right').addEventListener('touchstart', () => keys.right = true);
+    document.querySelector('.right').addEventListener('touchend', () => keys.right = false);
+    document.querySelector('.jump').addEventListener('touchstart', () => {
+      if (player.grounded) {
+        player.dy = -player.jumpPower;
+        player.grounded = false;
+      }
+    });
 
-  // === DEBUG COUNTERS ===
-  const debugBox = document.getElementById('debugInfo');
-  let lastTime = performance.now();
-  let fps = 0;
+    let lastTime = performance.now();
+    let fps = 0;
+    let debugEl = document.getElementById('debugInfo');
+    let collisionTop = false, collisionBottom = false;
 
-  function updateDebugInfo() {
-    const now = performance.now();
-    const delta = now - lastTime;
-    fps = Math.round(1000 / delta);
-    lastTime = now;
+    function updatePlayer() {
+      player.dx = 0;
+      if (keys.left) player.dx = -player.speed;
+      if (keys.right) player.dx = player.speed;
 
-    let memStr = "N/A";
-    if (performance.memory) {
-      const used = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
-      const total = (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
-      memStr = `${used} / ${total} MB`;
+      player.dy += 0.4; // gravity
+
+      player.x += player.dx;
+      collisionTop = collisionBottom = false;
+      if (checkCollision(player.x, player.y)) {
+        player.x -= player.dx;
+      }
+
+      player.y += player.dy;
+      if (checkCollision(player.x, player.y)) {
+        player.y -= player.dy;
+        if (player.dy > 0) {
+          collisionBottom = true;
+          player.grounded = true;
+        } else {
+          collisionTop = true;
+        }
+        player.dy = 0;
+      }
     }
 
-    debugBox.innerHTML = `
-      FPS: ${fps}<br>
-      Memory: ${memStr}<br>
-      X: ${player.x.toFixed(1)}<br>
-      Y: ${player.y.toFixed(1)}<br>
-      dy: ${player.dy.toFixed(2)}<br>
-      Grounded: ${player.grounded}<br>
-      Colliding: ${player.colliding}
-    `;
-  }
+    function checkCollision(x, y) {
+      const corners = [
+        [x, y],
+        [x + player.width, y],
+        [x, y + player.height],
+        [x + player.width, y + player.height]
+      ];
+      for (const [cx, cy] of corners) {
+        const tx = Math.floor(cx / tileSize);
+        const ty = Math.floor(cy / tileSize);
+        if (level[ty] && level[ty][tx] && level[ty][tx] === '#') {
+          return true;
+        }
+      }
+      return false;
+    }
 
-  function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    updatePlayer();
-    updateCamera();
-    drawLevel();
-    drawPlayer();
-    updateDebugInfo();
-    requestAnimationFrame(gameLoop);
-  }
+    function drawLevel() {
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          const char = level[y][x];
+          const color = tileColors[char] || '#000';
+          ctx.fillStyle = color;
+          ctx.fillRect(x * tileSize - cameraX, y * tileSize - cameraY, tileSize, tileSize);
+        }
+      }
+    }
 
-  gameLoop();
-</script
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x - cameraX, player.y - cameraY, player.width, player.height);
+    }
+
+    function updateCamera() {
+      const targetX = player.x + player.width / 2 - canvas.width / 2;
+      const targetY = player.y + player.height / 2 - canvas.height / 2;
+      cameraX += (targetX - cameraX) * 0.05;
+      cameraY += (targetY - cameraY) * 0.05;
+    }
+
+    function updateDebugInfo() {
+      const memory = performance.memory ? performance.memory.usedJSHeapSize / 1024 / 1024 : 0;
+      debugEl.innerHTML = `
+FPS: ${fps.toFixed(1)}<br>
+X: ${player.x.toFixed(1)} Y: ${player.y.toFixed(1)}<br>
+Grounded: ${player.grounded}<br>
+Jumping: ${!player.grounded && player.dy < 0}<br>
+Collisions - Top: ${collisionTop}, Bottom: ${collisionBottom}<br>
+Memory: ${memory ? memory.toFixed(1) + ' MB' : 'N/A'}
+      `;
+    }
+
+    function gameLoop() {
+      const now = performance.now();
+      fps = 1000 / (now - lastTime);
+      lastTime = now;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updatePlayer();
+      updateCamera();
+      drawLevel();
+      drawPlayer();
+      updateDebugInfo();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+    </html
