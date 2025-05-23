@@ -8,12 +8,14 @@
   <style>
     body {
       margin: 0;
-      background-color: #111;
+      background-color: #87CEFA;
       display: flex;
       flex-direction: column;
       align-items: center;
       touch-action: manipulation;
       overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     canvas {
@@ -42,16 +44,27 @@
       cursor: pointer;
       min-width: 90px;
       transition: background-color 0.2s;
-    }
-
-    .control-btn:hover {
-      background-color: #555;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .control-btn.jump {
       font-family: 'Press Start 2P', cursive;
       font-size: 12px;
       letter-spacing: 1px;
+    }
+
+    #debug {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 4px;
     }
 
     @media screen and (max-width: 600px) {
@@ -65,41 +78,72 @@
         font-size: 14px;
       }
     }
-
-    #debugInfo {
-      position: absolute;
-      top: 5px;
-      left: 5px;
-      color: #fff;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 5px;
-      font-size: 12px;
-      font-family: monospace;
-      z-index: 1000;
-    }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="960" height="1280"></canvas>
+
   <div id="controls">
     <button class="control-btn left">&#x25C0;</button>
     <button class="control-btn jump">JUMP</button>
     <button class="control-btn right">&#x25B6;</button>
   </div>
-  <div id="debugInfo"></div>
+
+  <div id="debug"></div>
 
   <script>
     const tileSize = 32;
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Level layout (sample, customize later)
+    // Disable double tap zoom
+    document.addEventListener("touchstart", function (e) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
     const level = [
-      "########################",
-      "#S        o         F #",
-      "#   #####       #######",
-      "#         >           #",
-      "########################"
+      "##############################",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                            #",
+      "#                   F        #",
+      "#               ######       #",
+      "#                            #",
+      "#           #                #",
+      "#                            #",
+      "#                            #",
+      "#    ######                  #",
+      "#                            #",
+      "#                            #",
+      "# #      o           #       #",
+      "# #####################      #",
+      "#                            #",
+      "#                            #",
+      "#                     #####  #",
+      "#                            #",
+      "#                            #",
+      "#               ######       #",
+      "#                            #",
+      "#                            #",
+      "#       ######               #",
+      "#                            #",
+      "#                            #",
+      "#  S                         #",
+      "##############################"
     ];
 
     const tileColors = {
@@ -114,17 +158,20 @@
     };
 
     const player = {
-      x: 0, y: 0,
+      x: 0,
+      y: 0,
       width: tileSize * 0.8,
       height: tileSize * 0.8,
       color: '#00f',
-      dx: 0, dy: 0,
+      dx: 0,
+      dy: 0,
       speed: 2.5,
-      jumpPower: 13,
+      jumpPower: 7,
       grounded: false
     };
 
-    let cameraX = 0, cameraY = 0;
+    let cameraX = 0;
+    let cameraY = 0;
 
     for (let y = 0; y < level.length; y++) {
       for (let x = 0; x < level[y].length; x++) {
@@ -135,7 +182,19 @@
       }
     }
 
-    const keys = { left: false, right: false, jump: false };
+    const keys = {
+      left: false,
+      right: false,
+      jump: false
+    };
+
+    // Prevent stuck buttons on long press
+    const controlButtons = document.querySelectorAll('.control-btn');
+    controlButtons.forEach(btn => {
+      btn.addEventListener('contextmenu', e => e.preventDefault());
+      btn.addEventListener('mousedown', e => e.preventDefault());
+      btn.addEventListener('touchstart', e => e.preventDefault());
+    });
 
     document.querySelector('.left').addEventListener('touchstart', () => keys.left = true);
     document.querySelector('.left').addEventListener('touchend', () => keys.left = false);
@@ -148,20 +207,14 @@
       }
     });
 
-    let lastTime = performance.now();
-    let fps = 0;
-    let debugEl = document.getElementById('debugInfo');
-    let collisionTop = false, collisionBottom = false;
-
     function updatePlayer() {
       player.dx = 0;
       if (keys.left) player.dx = -player.speed;
       if (keys.right) player.dx = player.speed;
 
-      player.dy += 0.4; // gravity
+      player.dy += 0.4;
 
       player.x += player.dx;
-      collisionTop = collisionBottom = false;
       if (checkCollision(player.x, player.y)) {
         player.x -= player.dx;
       }
@@ -170,10 +223,7 @@
       if (checkCollision(player.x, player.y)) {
         player.y -= player.dy;
         if (player.dy > 0) {
-          collisionBottom = true;
           player.grounded = true;
-        } else {
-          collisionTop = true;
         }
         player.dy = 0;
       }
@@ -186,6 +236,7 @@
         [x, y + player.height],
         [x + player.width, y + player.height]
       ];
+
       for (const [cx, cy] of corners) {
         const tx = Math.floor(cx / tileSize);
         const ty = Math.floor(cy / tileSize);
@@ -193,6 +244,7 @@
           return true;
         }
       }
+
       return false;
     }
 
@@ -219,34 +271,29 @@
       cameraY += (targetY - cameraY) * 0.05;
     }
 
-    function updateDebugInfo() {
-      const memory = performance.memory ? performance.memory.usedJSHeapSize / 1024 / 1024 : 0;
-      debugEl.innerHTML = `
-FPS: ${fps.toFixed(1)}<br>
-X: ${player.x.toFixed(1)} Y: ${player.y.toFixed(1)}<br>
-Grounded: ${player.grounded}<br>
-Jumping: ${!player.grounded && player.dy < 0}<br>
-Collisions - Top: ${collisionTop}, Bottom: ${collisionBottom}<br>
-Memory: ${memory ? memory.toFixed(1) + ' MB' : 'N/A'}
-      `;
+    const debug = document.getElementById('debug');
+    function updateDebug() {
+      debug.innerText = `
+X: ${player.x.toFixed(1)}
+Y: ${player.y.toFixed(1)}
+dx: ${player.dx.toFixed(1)}
+dy: ${player.dy.toFixed(1)}
+Grounded: ${player.grounded}
+Keys: ${JSON.stringify(keys)}
+      `.trim();
     }
 
     function gameLoop() {
-      const now = performance.now();
-      fps = 1000 / (now - lastTime);
-      lastTime = now;
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       updatePlayer();
       updateCamera();
       drawLevel();
       drawPlayer();
-      updateDebugInfo();
-
+      updateDebug();
       requestAnimationFrame(gameLoop);
     }
 
     gameLoop();
   </script>
 </body>
-    </html
+  </html
