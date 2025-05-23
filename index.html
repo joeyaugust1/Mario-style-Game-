@@ -65,6 +65,7 @@
       font-size: 12px;
       padding: 6px 10px;
       border-radius: 4px;
+      white-space: pre;
     }
 
     @media screen and (max-width: 600px) {
@@ -96,7 +97,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Disable double tap zoom
     document.addEventListener("touchstart", function (e) {
       if (e.touches.length > 1) {
         e.preventDefault();
@@ -166,7 +166,7 @@
       dx: 0,
       dy: 0,
       speed: 2.5,
-      jumpPower: 11,
+      jumpPower: 7,
       grounded: false
     };
 
@@ -182,13 +182,8 @@
       }
     }
 
-    const keys = {
-      left: false,
-      right: false,
-      jump: false
-    };
+    const keys = { left: false, right: false, jump: false };
 
-    // Prevent stuck buttons on long press
     const controlButtons = document.querySelectorAll('.control-btn');
     controlButtons.forEach(btn => {
       btn.addEventListener('contextmenu', e => e.preventDefault());
@@ -211,20 +206,13 @@
       player.dx = 0;
       if (keys.left) player.dx = -player.speed;
       if (keys.right) player.dx = player.speed;
-
       player.dy += 0.4;
-
       player.x += player.dx;
-      if (checkCollision(player.x, player.y)) {
-        player.x -= player.dx;
-      }
-
+      if (checkCollision(player.x, player.y)) player.x -= player.dx;
       player.y += player.dy;
       if (checkCollision(player.x, player.y)) {
         player.y -= player.dy;
-        if (player.dy > 0) {
-          player.grounded = true;
-        }
+        if (player.dy > 0) player.grounded = true;
         player.dy = 0;
       }
     }
@@ -236,7 +224,6 @@
         [x, y + player.height],
         [x + player.width, y + player.height]
       ];
-
       for (const [cx, cy] of corners) {
         const tx = Math.floor(cx / tileSize);
         const ty = Math.floor(cy / tileSize);
@@ -244,7 +231,6 @@
           return true;
         }
       }
-
       return false;
     }
 
@@ -272,7 +258,26 @@
     }
 
     const debug = document.getElementById('debug');
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+
     function updateDebug() {
+      frameCount++;
+      const now = performance.now();
+      const delta = now - lastTime;
+      if (delta >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastTime = now;
+      }
+
+      let memory = 'N/A';
+      if (performance.memory) {
+        const usedMB = performance.memory.usedJSHeapSize / 1048576;
+        memory = `${usedMB.toFixed(2)} MB`;
+      }
+
       debug.innerText = `
 X: ${player.x.toFixed(1)}
 Y: ${player.y.toFixed(1)}
@@ -280,6 +285,8 @@ dx: ${player.dx.toFixed(1)}
 dy: ${player.dy.toFixed(1)}
 Grounded: ${player.grounded}
 Keys: ${JSON.stringify(keys)}
+FPS: ${fps}
+Memory: ${memory}
       `.trim();
     }
 
